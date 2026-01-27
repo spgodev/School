@@ -2,16 +2,11 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log"
 	"os"
 	"time"
 
-	_ "github.com/lib/pq"
-
-	_ "github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"School/internal/app"
 	"School/internal/repository"
@@ -26,23 +21,23 @@ func main() {
 	if dsn == "" {
 		dsn = "postgres://postgres:zXc12026@localhost:5434/students?sslmode=disable"
 	}
-	
-	db, err := sql.Open("postgres", dsn)
+
+	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	defer pool.Close()
 
-	if err := db.PingContext(ctx); err != nil {
+	if err := pool.Ping(ctx); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := app.RunMigrations(db); err != nil {
+	if err := app.RunMigrations(dsn); err != nil {
 		log.Fatal(err)
 	}
 
-	studentRepo := repository.NewStudentRepository(db)
-	reportStory := story.NewSchoolReportStory(studentRepo)
+	studentRepo := repository.NewStudentRepository(pool)
+	reportStory := story.New(studentRepo)
 
 	report, err := reportStory.BuildReport(ctx)
 	if err != nil {

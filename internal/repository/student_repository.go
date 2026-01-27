@@ -2,30 +2,31 @@ package repository
 
 import (
 	"context"
-	"database/sql"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"School/internal/domain"
 )
 
 type StudentRepository struct {
-	db *sql.DB
+	db *pgxpool.Pool
 }
 
-func NewStudentRepository(db *sql.DB) *StudentRepository {
+func NewStudentRepository(db *pgxpool.Pool) *StudentRepository {
 	return &StudentRepository{db: db}
 }
 
 func (r *StudentRepository) GetAll(ctx context.Context) ([]domain.Student, error) {
-	rows, err := r.db.QueryContext(ctx, `
-    SELECT id, name, age, gender, height
-    FROM students
-`)
+	rows, err := r.db.Query(ctx, `
+		SELECT id, name, age, gender, height
+		FROM students
+	`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var students []domain.Student
+	students := make([]domain.Student, 0)
 
 	for rows.Next() {
 		var s domain.Student
