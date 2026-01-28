@@ -4,57 +4,75 @@ import (
 	"context"
 
 	"School/internal/domain"
-	"School/internal/repository"
 )
 
 type SchoolReportStory struct {
-	studentRepository *repository.StudentRepository
+	repo domain.StudentGetter
 }
 
-func NewSchoolReportStory(repo *repository.StudentRepository) *SchoolReportStory {
-	return &SchoolReportStory{studentRepository: repo}
+const AdultAge = 18
+
+func New(repo domain.StudentGetter) *SchoolReportStory {
+	return &SchoolReportStory{repo: repo}
 }
 
 func (s *SchoolReportStory) BuildReport(ctx context.Context) (*domain.SchoolReport, error) {
-	students, err := s.studentRepository.GetAll(ctx)
+	students, err := s.repo.GetAll(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	report := &domain.SchoolReport{
 		HeightGroups: []domain.HeightGroupReport{
-			{Group: "<150", Count: 0},
-			{Group: "150-160", Count: 0},
-			{Group: "160-170", Count: 0},
-			{Group: "170-180", Count: 0},
-			{Group: ">=180", Count: 0},
+			{Group: domain.Below150, Count: 0},
+			{Group: domain.From150To160, Count: 0},
+			{Group: domain.From160To170, Count: 0},
+			{Group: domain.From170To180, Count: 0},
+			{Group: domain.Higher180, Count: 0},
 		},
 	}
 
-	for _, st := range students {
+	counts := map[domain.HeightGroupName]int{
+		domain.Below150:     0,
+		domain.From150To160: 0,
+		domain.From160To170: 0,
+		domain.From170To180: 0,
+		domain.Higher180:    0,
+	}
 
+	for _, st := range students {
+		var group domain.HeightGroupName
 		switch {
 		case st.Height < 150:
-			report.HeightGroups[0].Count++
+			group = domain.Below150
 		case st.Height < 160:
-			report.HeightGroups[1].Count++
+			group = domain.From150To160
 		case st.Height < 170:
-			report.HeightGroups[2].Count++
+			group = domain.From160To170
 		case st.Height < 180:
-			report.HeightGroups[3].Count++
+			group = domain.From170To180
 		default:
-			report.HeightGroups[4].Count++
+			group = domain.Higher180
 		}
+		counts[group]++
 
-		if st.Gender == "Male" {
+		if st.Gender == domain.Male {
 			report.Males++
 		} else {
 			report.Females++
 		}
 
-		if st.Age >= 18 {
+		if st.Age >= AdultAge {
 			report.Adults++
 		}
+	}
+
+	report.HeightGroups = make([]domain.HeightGroupReport, 0, len(counts))
+	for group, count := range counts {
+		report.HeightGroups = append(report.HeightGroups, domain.HeightGroupReport{
+			Group: group,
+			Count: count,
+		})
 	}
 
 	return report, nil
