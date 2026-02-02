@@ -1,7 +1,5 @@
 package domain
 
-import "context"
-
 type Student struct {
 	ID     int64
 	Name   string
@@ -24,21 +22,17 @@ type HeightGroupReport struct {
 
 type HeightGroupName string
 
-var (
+const (
 	Below150     HeightGroupName = "<150"
 	From150To160 HeightGroupName = "150-160"
 	From160To170 HeightGroupName = "160-170"
 	From170To180 HeightGroupName = "170-180"
-	Higher180    HeightGroupName = ">180"
+	Higher180    HeightGroupName = ">=180"
 )
 
 type SchoolReport struct {
-	HeightGroups []HeightGroupReport
+	HeightGroups map[HeightGroupName]int
 	Males        int
 	Females      int
 	Adults       int
-}
-
-type StudentGetter interface {
-	GetAll(ctx context.Context) ([]Student, error)
 }

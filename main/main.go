@@ -1,6 +1,7 @@
 package main
 
 import (
+	"School/internal/domain"
 	"context"
 	"log"
 	"os"
@@ -45,8 +46,16 @@ func main() {
 	}
 
 	log.Println("SCHOOL REPORT")
-	for _, g := range report.HeightGroups {
-		log.Printf("  %-7s : %d\n", g.Group, g.Count)
+	order := []domain.HeightGroupName{
+		domain.Below150,
+		domain.From150To160,
+		domain.From160To170,
+		domain.From170To180,
+		domain.Higher180,
+	}
+
+	for _, group := range order {
+		log.Printf("  %-7s : %d\n", group, report.HeightGroups[group])
 	}
 	log.Printf("  Males   : %d\n", report.Males)
 	log.Printf("  Females : %d\n", report.Females)

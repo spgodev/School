@@ -1,20 +1,21 @@
 package story
 
 import (
+	"School/internal/domain"
 	"context"
 
-	"School/internal/domain"
+	"fmt"
 )
 
 type SchoolReportStory struct {
-	repo domain.StudentGetter
+	repo StudentGetter
+}
+
+func New(repo StudentGetter) *SchoolReportStory {
+	return &SchoolReportStory{repo: repo}
 }
 
 const AdultAge = 18
-
-func New(repo domain.StudentGetter) *SchoolReportStory {
-	return &SchoolReportStory{repo: repo}
-}
 
 func (s *SchoolReportStory) BuildReport(ctx context.Context) (*domain.SchoolReport, error) {
 	students, err := s.repo.GetAll(ctx)
@@ -23,21 +24,13 @@ func (s *SchoolReportStory) BuildReport(ctx context.Context) (*domain.SchoolRepo
 	}
 
 	report := &domain.SchoolReport{
-		HeightGroups: []domain.HeightGroupReport{
-			{Group: domain.Below150, Count: 0},
-			{Group: domain.From150To160, Count: 0},
-			{Group: domain.From160To170, Count: 0},
-			{Group: domain.From170To180, Count: 0},
-			{Group: domain.Higher180, Count: 0},
+		HeightGroups: map[domain.HeightGroupName]int{
+			domain.Below150:     0,
+			domain.From150To160: 0,
+			domain.From160To170: 0,
+			domain.From170To180: 0,
+			domain.Higher180:    0,
 		},
-	}
-
-	counts := map[domain.HeightGroupName]int{
-		domain.Below150:     0,
-		domain.From150To160: 0,
-		domain.From160To170: 0,
-		domain.From170To180: 0,
-		domain.Higher180:    0,
 	}
 
 	for _, st := range students {
@@ -54,25 +47,20 @@ func (s *SchoolReportStory) BuildReport(ctx context.Context) (*domain.SchoolRepo
 		default:
 			group = domain.Higher180
 		}
-		counts[group]++
+		report.HeightGroups[group]++
 
-		if st.Gender == domain.Male {
+		switch st.Gender {
+		case domain.Male:
 			report.Males++
-		} else {
+		case domain.Female:
 			report.Females++
+		default:
+			return nil, fmt.Errorf("unknown gender: %v", st.Gender)
 		}
 
 		if st.Age >= AdultAge {
 			report.Adults++
 		}
-	}
-
-	report.HeightGroups = make([]domain.HeightGroupReport, 0, len(counts))
-	for group, count := range counts {
-		report.HeightGroups = append(report.HeightGroups, domain.HeightGroupReport{
-			Group: group,
-			Count: count,
-		})
 	}
 
 	return report, nil
