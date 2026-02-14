@@ -1,21 +1,22 @@
 package main
 
 import (
-	"School/internal/domain"
 	"context"
 	"log"
 	"os"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"School/internal/app"
+	"School/internal/controller"
 	"School/internal/repository"
 	"School/internal/story"
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	setupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	dsn := os.Getenv("DB_DSN")
@@ -23,13 +24,13 @@ func main() {
 		dsn = "postgres://postgres:zXc12026@localhost:5434/students?sslmode=disable"
 	}
 
-	pool, err := pgxpool.New(ctx, dsn)
+	pool, err := pgxpool.New(setupCtx, dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer pool.Close()
 
-	if err := pool.Ping(ctx); err != nil {
+	if err := pool.Ping(setupCtx); err != nil {
 		log.Fatal(err)
 	}
 
@@ -40,24 +41,17 @@ func main() {
 	studentRepo := repository.NewStudentRepository(pool)
 	reportStory := story.New(studentRepo)
 
-	report, err := reportStory.BuildReport(ctx)
-	if err != nil {
-		log.Fatal(err)
+	studentController := controller.NewStudentController(studentRepo, reportStory)
+
+	r := gin.Default()
+	r.POST("/students", studentController.CreateStudent)
+	r.GET("/students", studentController.ListStudents)
+	r.GET("/students/report", studentController.GetReport)
+
+	addr := os.Getenv("HTTP_ADDR")
+	if addr == "" {
+		addr = ":8080"
 	}
 
-	log.Println("SCHOOL REPORT")
-	order := []domain.HeightGroupName{
-		domain.Below150,
-		domain.From150To160,
-		domain.From160To170,
-		domain.From170To180,
-		domain.Higher180,
-	}
-
-	for _, group := range order {
-		log.Printf("  %-7s : %d\n", group, report.HeightGroups[group])
-	}
-	log.Printf("  Males   : %d\n", report.Males)
-	log.Printf("  Females : %d\n", report.Females)
-	log.Printf("  Adults  : %d\n", report.Adults)
+	log.Fatal(r.Run(addr))
 }

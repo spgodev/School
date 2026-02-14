@@ -47,4 +47,18 @@ func (r *StudentRepository) GetAll(ctx context.Context) ([]domain.Student, error
 	}
 
 	return students, nil
+
+}
+
+func (r *StudentRepository) Create(ctx context.Context, s domain.Student) (int64, error) {
+	var id int64
+	err := r.db.QueryRow(ctx, `
+		INSERT INTO students (name, age, gender, height)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id
+	`, s.Name, s.Age, s.Gender, s.Height).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
